@@ -86,12 +86,89 @@ After the cluster is created, configure kubectl to interact with it:
 gcloud container clusters get-credentials gke-cluster-mumbai --zone asia-south1-a --project YOUR_PROJECT_ID
 ```
 
-### Step 7: Verify the Deployment
+### Step 7: Connect to the Cluster
 
-Check that your nodes are running:
+After creating the GKE cluster, you need to configure your local environment to connect to it:
+
+#### Option 1: Using gcloud command
+
+The simplest way to connect to your GKE cluster is using the gcloud command:
+
+```bash
+gcloud container clusters get-credentials gke-cluster-mumbai --zone asia-south1-a --project YOUR_PROJECT_ID
+```
+
+This command:
+- Updates your kubeconfig file with appropriate credentials and endpoint information
+- Sets the current context to the newly created GKE cluster
+- Allows kubectl to communicate with your cluster
+
+#### Option 2: Manual kubeconfig setup
+
+If you prefer to set up the connection manually:
+
+1. Get the cluster credentials from the GCP Console or using Terraform output:
+   ```bash
+   terraform output -raw kubernetes_cluster_host
+   ```
+
+2. Get the cluster CA certificate:
+   ```bash
+   gcloud container clusters describe gke-cluster-mumbai \
+     --zone asia-south1-a \
+     --format="value(masterAuth.clusterCaCertificate)" | base64 --decode > ca.crt
+   ```
+
+3. Get an authentication token:
+   ```bash
+   gcloud auth print-access-token
+   ```
+
+4. Create or update your kubeconfig file:
+   ```bash
+   kubectl config set-cluster gke-cluster-mumbai \
+     --server=https://YOUR_CLUSTER_ENDPOINT \
+     --certificate-authority=ca.crt
+
+   kubectl config set-credentials gke-user \
+     --token=YOUR_AUTH_TOKEN
+
+   kubectl config set-context gke-cluster-mumbai \
+     --cluster=gke-cluster-mumbai \
+     --user=gke-user
+
+   kubectl config use-context gke-cluster-mumbai
+   ```
+
+#### Option 3: Using GCP Console
+
+You can also connect to your cluster using the Google Cloud Console:
+
+1. Go to the [GKE section](https://console.cloud.google.com/kubernetes) of the Google Cloud Console
+2. Select your project
+3. Find your cluster in the list and click on the "Connect" button
+4. Click "Run in Cloud Shell" or copy the provided command to run locally
+
+### Step 8: Verify the Connection
+
+After connecting to the cluster, verify that you can access it:
 
 ```bash
 kubectl get nodes
+```
+
+You should see your 3 worker nodes listed, each with the e2-standard-4 machine type.
+
+To get more details about your cluster:
+
+```bash
+kubectl cluster-info
+```
+
+To view the running system pods:
+
+```bash
+kubectl get pods -n kube-system
 ```
 
 ## Understanding the Code
